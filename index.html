@@ -19,13 +19,10 @@
     .adresse {
       margin-bottom: 12px;
     }
-    input[type="text"] {
+    gmp-place-autocomplete {
       width: 100%;
-      font-size: 1.1em;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
+      display: block;
+      margin-bottom: 8px;
     }
     button {
       font-size: 1.2em;
@@ -42,7 +39,9 @@
       background-color: #0056b3;
     }
   </style>
+  <!-- Neues Script für PlaceAutocompleteElement -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDrqIABVI2KGi4uB6Wk0tZDRtEvrLAeAOM&libraries=places"></script>
+  <script src="https://unpkg.com/@googlemaps/places-widget-element/dist/index.min.js"></script>
 </head>
 <body>
 
@@ -53,52 +52,32 @@
 <button onclick="routeBerechnen()">🚗 Route berechnen</button>
 
 <script>
-  let autocompleteObjects = [];
-
   function addAdresse() {
     const div = document.createElement('div');
     div.className = 'adresse';
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'z. B. Musterstraße 1, 12345 Berlin';
+    // Neues PlaceAutocompleteElement
+    const autocompleteEl = document.createElement('gmp-place-autocomplete');
+    autocompleteEl.setAttribute('placeholder', 'z. B. Musterstraße 1, 12345 Berlin');
+    autocompleteEl.setAttribute('style', 'width:100%;display:block;margin-bottom:8px;');
 
-    div.appendChild(input);
+    div.appendChild(autocompleteEl);
     document.getElementById('adressen').appendChild(div);
-
-    setupAutocomplete(input);
   }
 
-  function setupAutocomplete(input) {
-  const autocomplete = new google.maps.places.Autocomplete(input, {
-    types: ['address'],
-  });
-
-  autocomplete.addListener('place_changed', () => {
-    const place = autocomplete.getPlace();
-    if (place && place.formatted_address) {
-      input.value = place.formatted_address;
-    }
-  });
-
-  // Keine setCustomValidity oder Eingabesperre mehr hier!
-}
-
   async function routeBerechnen() {
-    const inputs = document.querySelectorAll('.adresse input');
+    const apiKey = 'AIzaSyDrqIABVI2KGi4uB6Wk0tZDRtEvrLAeAOM';
     const gültigeAdressen = [];
-    const apiKey = 'AIzaSyDrqIABVI2KGi4uB6Wk0tZDRtEvrLAeAOM'; // Ersetze hier deinen echten API-Key
 
-    for (const input of inputs) {
-      const adresse = input.value.trim();
-      if (!adresse) continue;
-
-      const gültig = await prüfeAdresse(adresse, apiKey);
-      if (!gültig) {
-        alert(`Ungültige Adresse: ${adresse}`);
-        return;
+    for (const adresse of ausgewählteAdressen) {
+      if (adresse && adresse.length > 0) {
+        const istGültig = await prüfeAdresse(adresse, apiKey);
+        if (!istGültig) {
+          alert(`Ungültige Adresse: ${adresse}`);
+          return;
+        }
+        gültigeAdressen.push(adresse);
       }
-      gültigeAdressen.push(adresse);
     }
 
     if (gültigeAdressen.length < 2) {
@@ -117,7 +96,6 @@
 
   async function prüfeAdresse(adresse, key) {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(adresse)}&key=${key}`;
-
     try {
       const res = await fetch(url);
       const data = await res.json();
