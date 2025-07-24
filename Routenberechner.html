@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Routenplaner für Außendienst</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 16px;
+      background: #f5f5f5;
+      max-width: 500px;
+      margin: auto;
+    }
+    h2 {
+      font-size: 1.4em;
+      text-align: center;
+    }
+    .adresse {
+      margin-bottom: 12px;
+    }
+    input[type="text"] {
+      width: 100%;
+      font-size: 1.1em;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      font-size: 1.2em;
+      padding: 12px;
+      width: 100%;
+      margin-top: 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDrqIABVI2KGi4uB6Wk0tZDRtEvrLAeAOM&libraries=places"></script>
+</head>
+<body>
+
+<h2>📍 Außendienst-Routenplaner</h2>
+
+<div id="adressen"></div>
+<button onclick="addAdresse()">➕ Adresse hinzufügen</button>
+<button onclick="routeBerechnen()">🚗 Route berechnen</button>
+
+<script>
+  let autocompleteObjects = [];
+
+  function addAdresse() {
+    const div = document.createElement('div');
+    div.className = 'adresse';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'z. B. Musterstraße 1, 12345 Berlin';
+
+    div.appendChild(input);
+    document.getElementById('adressen').appendChild(div);
+
+    setupAutocomplete(input);
+  }
+
+  function setupAutocomplete(input) {
+  const autocomplete = new google.maps.places.Autocomplete(input, {
+    types: ['address'],
+  });
+
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if (place && place.formatted_address) {
+      input.value = place.formatted_address;
+    }
+  });
+
+  // Keine setCustomValidity oder Eingabesperre mehr hier!
+}
+
+  async function routeBerechnen() {
+    const inputs = document.querySelectorAll('.adresse input');
+    const gültigeAdressen = [];
+    const apiKey = 'AIzaSyDrqIABVI2KGi4uB6Wk0tZDRtEvrLAeAOM'; // Ersetze hier deinen echten API-Key
+
+    for (const input of inputs) {
+      const adresse = input.value.trim();
+      if (!adresse) continue;
+
+      const gültig = await prüfeAdresse(adresse, apiKey);
+      if (!gültig) {
+        alert(`Ungültige Adresse: ${adresse}`);
+        return;
+      }
+      gültigeAdressen.push(adresse);
+    }
+
+    if (gültigeAdressen.length < 2) {
+      alert("Bitte mindestens 2 gültige Adressen eingeben.");
+      return;
+    }
+
+    const origin = encodeURIComponent(gültigeAdressen[0]);
+    const destination = encodeURIComponent(gültigeAdressen[gültigeAdressen.length - 1]);
+    const waypoints = gültigeAdressen.slice(1, -1).map(a => encodeURIComponent(a)).join('|');
+
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+
+    window.open(mapsUrl, '_blank');
+  }
+
+  async function prüfeAdresse(adresse, key) {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(adresse)}&key=${key}`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      return data.status === 'OK';
+    } catch (e) {
+      console.error("Fehler bei Adressprüfung:", e);
+      return false;
+    }
+  }
+</script>
+
+</body>
+</html>
